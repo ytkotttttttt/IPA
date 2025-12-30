@@ -1,0 +1,41 @@
+# Codemagic Build Configuration - FINALLY Version
+
+workflows:
+  ios-workflow:
+    name: iOS Workflow
+    environment:
+      vars:
+        XCODE_VERSION: 16.1
+      xcode: 16.1
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm install
+      - name: Set up Capacitor
+        script: |
+          npx cap sync
+          npx cap copy ios
+          # Sicherstellen, dass Web-Dateien vorhanden sind
+          ls -la ios/App/App/public/
+          # Falls leer, manuell kopieren
+          cp -r 0/* ios/App/App/public/
+      - name: Build iOS app
+        script: |
+          cd ios/App
+          xcodebuild -project App.xcodeproj \
+                     -scheme App \
+                     -configuration Release \
+                     -destination generic/platform=iOS \
+                     -archivePath $CM_BUILD_DIR/App.xcarchive \
+                     archive \
+                     -allowProvisioningUpdates \
+                     -destination generic/platform=iOS
+      - name: Export IPA
+        script: |
+          xcodebuild -exportArchive \
+                     -archivePath $CM_BUILD_DIR/App.xcarchive \
+                     -exportPath $CM_BUILD_DIR/build \
+                     -exportOptionsPlist ExportOptions.plist
+    artifacts:
+      - build/*.ipa
+      - $CM_BUILD_DIR/**/*.xcarchive
